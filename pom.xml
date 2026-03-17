@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+           http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+ 
+  <groupId>com.memoryintel</groupId>
+  <artifactId>memory-intel-agent</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+ 
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+ 
+  <dependencies>
+    <!-- ASM: the bytecode manipulation library we use in Steps 5-6 -->
+    <dependency>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm</artifactId>
+      <version>9.6</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.13.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+ 
+  <build>
+    <plugins>
+      <!-- maven-assembly-plugin creates the fat jar with all dependencies bundled -->
+      <!-- This is required because the ASM library must be inside the agent jar -->
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <descriptorRefs><descriptorRef>jar-with-dependencies</descriptorRef></descriptorRefs>
+          <archive>
+            <manifestEntries>
+              <!-- Tell the JVM which class is the agent entry point -->
+              <Premain-Class>com.memoryintel.agent.MemoryIntelAgent</Premain-Class>
+              <!-- Allow retransforming already-loaded classes at runtime -->
+              <Can-Retransform-Classes>true</Can-Retransform-Classes>
+              <!-- Allow redefining class implementations at runtime -->
+              <Can-Redefine-Classes>true</Can-Redefine-Classes>
+            </manifestEntries>
+          </archive>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id>
+            <phase>package</phase>
+            <goals><goal>single</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
