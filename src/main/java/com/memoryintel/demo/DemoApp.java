@@ -9,11 +9,9 @@ public class DemoApp {
         System.out.println("[Demo] Starting allocation workload");
         int tick = 0;
         while (true) {
-            // Create many short-lived objects per tick
             for (int i = 0; i < 200; i++) {
                 new ArrayList<>(Arrays.asList("a", "b", "c"));
             }
-            // Accumulate objects in the cache (simulates a leak)
             cache.put(tick, "cached-value-" + tick);
 
             if (tick % 10 == 0)

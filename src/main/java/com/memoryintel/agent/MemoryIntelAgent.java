@@ -1,5 +1,6 @@
 package com.memoryintel.agent;
 
+import com.memoryintel.analysis.AllocationCollector;
 import com.memoryintel.analysis.MemoryAnalysisEngine;
 import com.memoryintel.event.EventPipeline;
 import com.memoryintel.sampling.GCListener;
@@ -44,6 +45,7 @@ public class MemoryIntelAgent {
     public static void bootstrap(Instrumentation inst, AgentConfig config) {
         eventPipeline = new EventPipeline(config.getMaxQueueSize());
         analysisEngine = new MemoryAnalysisEngine(eventPipeline, config);
+        AllocationCollector.setPipeline(eventPipeline);
 
         MemoryClassTransformer transformer = new MemoryClassTransformer(config);
         inst.addTransformer(transformer);

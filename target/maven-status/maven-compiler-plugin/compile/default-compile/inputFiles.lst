@@ -1,2 +1,15 @@
+C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\agent\AgentConfig.java
 C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\agent\MemoryIntelAgent.java
+C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\analysis\AllocationCollector.java
+C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\analysis\ClassAnalyser.java
+C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\analysis\InstrumentingMethodVisitor.java
+C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\analysis\MemoryAnalysisEngine.java
 C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\demo\DemoApp.java
+C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\event\EventPipeline.java
+C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\event\GcNotificationEvent.java
+C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\event\HeapSampleEvent.java
+C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\event\MemoryEvent.java
+C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\event\ObjectAllocationEvent.java
+C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\sampling\GCListener.java
+C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\sampling\MemorySampler.java
+C:\Users\kariu\Desktop\memory-intel\src\main\java\com\memoryintel\transformer\MemoryClassTransformer.java

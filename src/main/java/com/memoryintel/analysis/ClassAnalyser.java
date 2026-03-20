@@ -50,6 +50,10 @@ public class ClassAnalyser {
             this.ownerClass = ownerClass;
         }
 
+        void markInstrumented() {
+            this.instrumented = true;
+        }
+
         @Override
         public MethodVisitor visitMethod(int access, String name, String descriptor,
                                          String signature, String[] exceptions) {
@@ -61,7 +65,7 @@ public class ClassAnalyser {
             }
 
             InstrumentingMethodVisitor imv =
-                    new InstrumentingMethodVisitor(Opcodes.ASM9, mv, ownerClass, name);
+                    new InstrumentingMethodVisitor(Opcodes.ASM9, mv, ownerClass, name, this);
             if (imv.isInstrumented()) instrumented = true;
             return imv;
         }

@@ -21,10 +21,13 @@ public class InstrumentingMethodVisitor extends MethodVisitor {
     private String pendingNewType = null;
     private boolean instrumented  = false;
 
-    public InstrumentingMethodVisitor(int api, MethodVisitor mv, String ownerClass, String ownerMethod) {
+    private final ClassAnalyser.InstrumentingClassVisitor parent; // Reference to parent
+
+    public InstrumentingMethodVisitor(int api, MethodVisitor mv, String ownerClass, String ownerMethod, ClassAnalyser.InstrumentingClassVisitor parent) {
         super(api, mv);
         this.ownerClass = ownerClass;
         this.ownerMethod = ownerMethod;
+        this.parent = parent;
     }
 
     /**
@@ -54,7 +57,7 @@ public class InstrumentingMethodVisitor extends MethodVisitor {
         if(opcode == Opcodes.INVOKESPECIAL
             && "<init>".equals(name)
             && pendingNewType  != null
-            && owner.equals(ownerClass)
+            && owner.equals(pendingNewType)
         ) {
 
             // Stack : [... objectref, arg1, arg2, ...]. We need to capture the reference before it's consumed by the constructor
@@ -69,6 +72,7 @@ public class InstrumentingMethodVisitor extends MethodVisitor {
             *
             * */
             mv.visitMethodInsn(Opcodes.INVOKESTATIC, COLLECTOR, ON_ALLOC, ON_ALLOC_DESC, false);
+            parent.markInstrumented();
             instrumented = true;
             pendingNewType = null;
 

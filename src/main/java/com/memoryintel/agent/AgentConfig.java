@@ -71,7 +71,7 @@ public class AgentConfig {
             return false;
         String cn = internalClassName.replace('/', '.');
 
-        if (cn.startsWith("com.memoryintel."))
+        if (cn.startsWith("com.memoryintel.analysis")|| cn.startsWith("com.memoryintel.agent") || cn.startsWith("com.memoryintel.event")|| cn.startsWith("com.memoryintel.sampling"))
             return false;
         if (cn.startsWith("java.") || cn.startsWith("sun"))
             return false;
