@@ -49,7 +49,8 @@ public class MemoryAnalysisEngine implements Runnable{
     private final AtomicLong eventsProcessed = new AtomicLong();
     private final long startTime = System.currentTimeMillis();
 
-    public MemoryAnalysisEngine(EventPipeline pipeline, AgentConfig config) {
+    public
+    MemoryAnalysisEngine(EventPipeline pipeline, AgentConfig config) {
         this.pipeline = pipeline;
         this.config = config;
     }
