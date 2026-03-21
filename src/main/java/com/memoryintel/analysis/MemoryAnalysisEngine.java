@@ -5,6 +5,8 @@ import com.memoryintel.event.EventPipeline;
 import com.memoryintel.event.HeapSampleEvent;
 import com.memoryintel.event.MemoryEvent;
 import com.memoryintel.event.ObjectAllocationEvent;
+import com.memoryintel.lineage.LineageTracker;
+import com.memoryintel.transformer.DynamicRetransformer;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,8 +51,22 @@ public class MemoryAnalysisEngine implements Runnable{
     private final AtomicLong eventsProcessed = new AtomicLong();
     private final long startTime = System.currentTimeMillis();
 
-    public
-    MemoryAnalysisEngine(EventPipeline pipeline, AgentConfig config) {
+    private final Set<String> escalatedClasses = ConcurrentHashMap.newKeySet();
+    private volatile DynamicRetransformer retransformer;
+    public void setRetransformer(DynamicRetransformer r) { this.retransformer = r; }
+
+
+    private final LineageTracker lineageTracker = new LineageTracker();
+
+
+    public Map<String,Long> getLineageFor(String className, int topN) {
+        return lineageTracker.getLineageFor(className, topN);
+    }
+
+
+
+
+    public MemoryAnalysisEngine(EventPipeline pipeline, AgentConfig config) {
         this.pipeline = pipeline;
         this.config = config;
     }
@@ -100,8 +116,11 @@ public class MemoryAnalysisEngine implements Runnable{
     private void processAllocation(ObjectAllocationEvent event) {
         allocationCounts.computeIfAbsent(event.getClassName(), k -> new AtomicLong()).incrementAndGet();
         windowCounts.computeIfAbsent(event.getClassName(), k -> new AtomicLong()).incrementAndGet();
+
         String site = event.getAllocatingClass() + "." + event.getAllocatingMethod();
         callSiteCounts.computeIfAbsent(site, k -> new AtomicLong()).incrementAndGet();
+        lineageTracker.recordAllocation(event);
+
     }
     private void processHeapSample(HeapSampleEvent e) {
         synchronized (heapHistory){
@@ -109,6 +128,21 @@ public class MemoryAnalysisEngine implements Runnable{
             while(heapHistory.size() >300) heapHistory.removeFirst();
         }
         if(e.getHeapUsagePercent()>80) System.out.printf("[Memory intel] ⚠️ High heap usage: %.1f%%n", e.getHeapUsagePercent());
+
+        checkEscalation();
+    }
+    private void checkEscalation() {
+        allocationRates.entrySet().stream()
+                .filter(e -> e.getValue() > 500.0)
+                .map(Map.Entry::getKey)
+                .filter(cls -> !escalatedClasses.contains(cls))
+                .forEach(cls -> {
+                    escalatedClasses.add(cls);
+                    System.out.printf(
+                            "[MemoryIntel] Escalating: %s (%.0f/sec)%n", cls,
+                            allocationRates.get(cls));
+                    if (retransformer != null) retransformer.escalate(cls);
+                });
     }
     private void maybeRecalculateRates() {
         long now = System.currentTimeMillis();
