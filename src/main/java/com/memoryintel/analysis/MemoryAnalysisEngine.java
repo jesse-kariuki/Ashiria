@@ -23,6 +23,9 @@ public class MemoryAnalysisEngine implements Runnable{
     private static final int WINDOW_SECONDS = 10;
     private final EventPipeline pipeline;
     private final AgentConfig config;
+    private final LeakDetector leakDetector = new LeakDetector();
+
+
 
     /*
     *  -- Allocation tracking -----------------------------------------------
@@ -61,6 +64,10 @@ public class MemoryAnalysisEngine implements Runnable{
 
     public Map<String,Long> getLineageFor(String className, int topN) {
         return lineageTracker.getLineageFor(className, topN);
+    }
+
+    public Map<String, Long> getThreadLineage(String thread, int topN) {
+        return lineageTracker.getThreadLineage(thread, topN);
     }
 
 
@@ -156,6 +163,12 @@ public class MemoryAnalysisEngine implements Runnable{
             if(rate > 0.1) rates.put(cls, rate);
         });
         allocationRates = Collections.unmodifiableMap(rates);
+        allocationCounts.forEach((cls, count) -> {
+        Double rate = rates.getOrDefault(cls, 0.0);
+        leakDetector.tick(cls, count.get(), rate);
+        
+            }   );
+
         windowCounts.clear();
         lastWindowResetTime = now;
 
@@ -201,6 +214,11 @@ public class MemoryAnalysisEngine implements Runnable{
         public final long timestamp, usedBytes, maxBytes;
         HeapPoint(long t, long u, long m) { timestamp=t; usedBytes=u; maxBytes=m; }
     }
+
+
+    public EventPipeline getPipeline() { return pipeline; }
+    public LeakDetector getLeakDetector() { return leakDetector; }
+
 
 
 

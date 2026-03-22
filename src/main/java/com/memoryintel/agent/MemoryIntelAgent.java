@@ -2,11 +2,14 @@ package com.memoryintel.agent;
 
 import com.memoryintel.analysis.AllocationCollector;
 import com.memoryintel.analysis.MemoryAnalysisEngine;
+import com.memoryintel.api.HttpApiServer;
 import com.memoryintel.event.EventPipeline;
 import com.memoryintel.sampling.GCListener;
 import com.memoryintel.sampling.MemorySampler;
+import com.memoryintel.transformer.DynamicRetransformer;
 import com.memoryintel.transformer.MemoryClassTransformer;
 
+import java.io.IOException;
 import java.lang.instrument.Instrumentation;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -24,6 +27,7 @@ public class MemoryIntelAgent {
     private static MemoryAnalysisEngine analysisEngine;
     private static EventPipeline eventPipeline;
     private static ScheduledExecutorService scheduler;
+    private static HttpApiServer apiServer; 
 
 
     public static void premain(String agentArgs, Instrumentation inst){
@@ -42,46 +46,54 @@ public class MemoryIntelAgent {
     }
 
 
-    public static void bootstrap(Instrumentation inst, AgentConfig config) {
-        eventPipeline = new EventPipeline(config.getMaxQueueSize());
-        analysisEngine = new MemoryAnalysisEngine(eventPipeline, config);
-        AllocationCollector.setPipeline(eventPipeline);
+    private static void bootstrap(Instrumentation inst, AgentConfig config) {
+    eventPipeline = new EventPipeline(config.getMaxQueueSize());
+    analysisEngine = new MemoryAnalysisEngine(eventPipeline, config);
 
-        MemoryClassTransformer transformer = new MemoryClassTransformer(config);
-        inst.addTransformer(transformer);
+    MemoryClassTransformer transformer = new MemoryClassTransformer(config);
+    inst.addTransformer(transformer, true);
 
+    new GCListener(eventPipeline).register();
+    DynamicRetransformer retransformer = new DynamicRetransformer(inst);
 
-        new GCListener(eventPipeline).register();
-        Thread analysisThread =
-                new Thread(()->analysisEngine.run(), "memory-intel-analysis");
-        analysisThread.setDaemon(true);
-        analysisThread.start();
+    analysisEngine.setRetransformer(retransformer);
+    Thread analysisThread = new Thread(analysisEngine::run, "memory-intel-analysis");
 
-        MemorySampler sampler = new MemorySampler(inst, eventPipeline, analysisEngine);
-        scheduler = Executors.newScheduledThreadPool(2, r -> {
-            Thread t = new Thread(r, "memory-intel-sampler");
-            t.setDaemon(true);
-            return t;
-        });
-        scheduler.scheduleAtFixedRate(
-                sampler::sample,
-                config.getSampleIntervalMs(),
-                config.getSampleIntervalMs(),
-                TimeUnit.MILLISECONDS
-        );
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("[MemoryIntel] Shutting down...");
-            scheduler.shutdown();
-            analysisEngine.shutdown();
-            eventPipeline.shutdown();
-            printFinalReport();
-        }, "memory-intel-shutdown"));
+    analysisThread.setDaemon(true);
+    analysisThread.start();
 
+    MemorySampler sampler = new MemorySampler(inst, eventPipeline, analysisEngine);
+    scheduler = Executors.newScheduledThreadPool(2, r -> {
+        Thread t = new Thread(r, "memory-intel-scheduler");
+        t.setDaemon(true);
+        return t;
+    });
+    scheduler.scheduleAtFixedRate(
+        sampler::sample,
+        config.getSampleIntervalMs(),
+        config.getSampleIntervalMs(),
+        TimeUnit.MILLISECONDS
+    );
 
-
-
-
+    if (config.getHttpPort() > 0) {
+        try {
+            apiServer = new HttpApiServer(analysisEngine, config.getHttpPort());
+            apiServer.start();
+            System.out.println("[MemoryIntel] HTTP API → http://localhost:" + config.getHttpPort());
+        } catch (IOException e) {
+            System.err.println("[MemoryIntel] HTTP server failed to start: " + e.getMessage());
+        }
     }
+
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+        System.out.println("[MemoryIntel] Shutting down...");
+        scheduler.shutdown();
+        analysisEngine.shutdown();
+        eventPipeline.shutdown();
+        if (apiServer != null) apiServer.shutdown();
+        printFinalReport();
+    }, "memory-intel-shutdown"));
+}
 
     private static void printFinalReport() {
         System.out.println("\n=== MemoryIntel Final Report ===");

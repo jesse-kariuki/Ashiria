@@ -26,16 +26,16 @@ public class AgentConfig {
     private final int topN;
     private final Set<String> trackedPackages;
     private final boolean verboseLogging;
-    private final String rustSocketPath;
+    private final int httpPort;
 
     private AgentConfig(long sampleIntervalMs, int maxQueueSize, int topN, Set<String> trackedPackages,
-            boolean verboseLogging, String rustSocketPath) {
+            boolean verboseLogging, int httpPort) {
         this.sampleIntervalMs = sampleIntervalMs;
         this.maxQueueSize = maxQueueSize;
         this.topN = topN;
         this.trackedPackages = trackedPackages;
         this.verboseLogging = verboseLogging;
-        this.rustSocketPath = rustSocketPath;
+        this.httpPort = httpPort;
     }
 
     public static AgentConfig parse(String args) {
@@ -55,14 +55,14 @@ public class AgentConfig {
         int maxQueue = parseInt(params.get("maxQueue"), DEFAULT_MAX_QUEUE);
         int topN = parseInt(params.get("topN"), DEFAULT_TOP_N);
         boolean verbose = Boolean.parseBoolean(params.getOrDefault("verbose", "false"));
-        String rustSocket = params.get("rustEngine");
+        int httpPort = parseInt(params.get("httpPort"),0);
         Set<String> trackedPackages = new HashSet<>();
         String trackParam = params.get("track");
 
         if (trackParam != null)
             Arrays.stream(trackParam.split(";")).map(String::trim).forEach(trackedPackages::add);
 
-        return new AgentConfig(interval, maxQueue, topN, trackedPackages, verbose, rustSocket);
+        return new AgentConfig(interval, maxQueue, topN, trackedPackages, verbose, httpPort);
 
     }
 
@@ -105,8 +105,8 @@ public class AgentConfig {
         return verboseLogging;
     }
 
-    public String getRustSocketPath() {
-        return rustSocketPath;
+    public int getHttpPort() {
+        return httpPort;
     }
 
     private static long parseLong(String value, long defaultValue) {
