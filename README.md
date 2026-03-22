@@ -56,7 +56,34 @@ java -javaagent:target/memory-intel-agent-1.0.0-jar-with-dependencies.jar=verbos
 - `topN=<N>`: top report size (default `20`)
 - `track=<pkg1>;<pkg2>`: only instrument matching package prefixes (default all non-system)
 - `verbose=<true|false>`: print instrumentation logs
-- `rustEngine=<socket>`: optional path for integrating external Rust engine (currently not implemented in pipeline)
+
+## Java Implementation
+
+The agent uses ASM to instrument bytecode and inject allocation tracking:
+
+```java
+// AllocationCollector bridges instrumented code to the event pipeline
+public static void recordAllocation(Object instance, String className, String methodName) {
+    MemoryEvent event = new ObjectAllocationEvent(className, methodName, System.nanoTime());
+    EventPipeline.getInstance().publish(event);
+}
+```
+
+`MemoryAnalysisEngine` processes events in a dedicated thread:
+
+```java
+public void run() {
+    while (running) {
+        List<MemoryEvent> batch = pipeline.poll(maxBatchSize);
+        for (MemoryEvent event : batch) {
+            if (event instanceof ObjectAllocationEvent) {
+                ObjectAllocationEvent alloc = (ObjectAllocationEvent) event;
+                allocationsByClass.merge(alloc.getClassName(), 1L, Long::sum);
+            }
+        }
+    }
+}
+```
 
 ## Limitations and current state
 
