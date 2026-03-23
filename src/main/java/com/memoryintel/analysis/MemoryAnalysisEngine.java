@@ -10,6 +10,9 @@ import com.memoryintel.transformer.DynamicRetransformer;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -60,6 +63,7 @@ public class MemoryAnalysisEngine implements Runnable{
 
 
     private final LineageTracker lineageTracker = new LineageTracker();
+    private ScheduledExecutorService heapSampler;
 
 
     public Map<String,Long> getLineageFor(String className, int topN) {
@@ -77,11 +81,16 @@ public class MemoryAnalysisEngine implements Runnable{
         this.pipeline = pipeline;
         this.config = config;
         AllocationCollector.setPipeline(pipeline); // ADD THIS
-
+        this.heapSampler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "HeapSampler");
+            t.setDaemon(true);
+            return t;
+        });
     }
 
     @Override
     public void run() {
+        startHeapSampler();
         List<MemoryEvent> batch = new ArrayList<>(BATCH_SIZE);
 
         while(running) {
@@ -207,7 +216,36 @@ public class MemoryAnalysisEngine implements Runnable{
     }
 
     public long getTotalEventsProcessed() { return eventsProcessed.get(); }
-    public void shutdown() { running = false; }
+    
+    private void startHeapSampler() {
+        heapSampler.scheduleAtFixedRate(() -> {
+            long used = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+            long max = Runtime.getRuntime().totalMemory();
+            long time = System.currentTimeMillis();
+            
+            synchronized (heapHistory) {
+                heapHistory.addLast(new HeapPoint(time, used, max));
+                if (heapHistory.size() > 300) { // prevent unbounded growth
+                    heapHistory.removeFirst();
+                }
+            }
+        }, 0, 1, TimeUnit.SECONDS);
+    }
+    
+    public void shutdown() {
+        running = false;
+        if (heapSampler != null) {
+            heapSampler.shutdown();
+            try {
+                if (!heapSampler.awaitTermination(5, TimeUnit.SECONDS)) {
+                    heapSampler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                heapSampler.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
 
 
 
