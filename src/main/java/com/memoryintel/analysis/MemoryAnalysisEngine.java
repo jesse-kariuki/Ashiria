@@ -76,6 +76,8 @@ public class MemoryAnalysisEngine implements Runnable{
     public MemoryAnalysisEngine(EventPipeline pipeline, AgentConfig config) {
         this.pipeline = pipeline;
         this.config = config;
+        AllocationCollector.setPipeline(pipeline); // ADD THIS
+
     }
 
     @Override
@@ -166,7 +168,7 @@ public class MemoryAnalysisEngine implements Runnable{
         allocationCounts.forEach((cls, count) -> {
         Double rate = rates.getOrDefault(cls, 0.0);
         leakDetector.tick(cls, count.get(), rate);
-        
+
             }   );
 
         windowCounts.clear();
