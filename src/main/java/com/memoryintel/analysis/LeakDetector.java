@@ -30,7 +30,7 @@ public class LeakDetector {
 
     // Per-class historical snapshot: (timestamp, totalCount)
     private static class ClassHistory {
-        final Deque<long[]> snapshots = new ArrayDeque<>(32); // [timestamp, count]
+        final Deque<long[]> snapshots = new ArrayDeque<>(32);
         final Deque<Double> rateHistory = new ArrayDeque<>(12);
     }
 
@@ -58,12 +58,11 @@ public class LeakDetector {
     }
 
     private void evaluate(String name, ClassHistory h, long total, double rate) {
-        if (h.snapshots.size() < 5) return; // Need enough history to judge
+        if (h.snapshots.size() < 5) return;
 
         int score = 0;
         List<String> evidence = new ArrayList<>();
 
-        // Heuristic 1: Monotonic growth — count never decreases (GC not reclaiming)
         long[] prev = null;
         boolean monotonic = true;
         for (long[] snap : h.snapshots) {
@@ -75,7 +74,6 @@ public class LeakDetector {
             score += 2;
         }
 
-        // Heuristic 2: Rate acceleration — second half of history faster than first
         if (h.rateHistory.size() >= 6) {
             Double[] rates = h.rateHistory.toArray(new Double[0]);
             int mid = rates.length / 2;

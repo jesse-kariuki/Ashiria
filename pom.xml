@@ -38,12 +38,10 @@
           <descriptorRefs><descriptorRef>jar-with-dependencies</descriptorRef></descriptorRefs>
           <archive>
             <manifestEntries>
-              <!-- Tell the JVM which class is the agent entry point -->
               <Premain-Class>com.memoryintel.agent.MemoryIntelAgent</Premain-Class>
-              <!-- Allow retransforming already-loaded classes at runtime -->
               <Can-Retransform-Classes>true</Can-Retransform-Classes>
-              <!-- Allow redefining class implementations at runtime -->
               <Can-Redefine-Classes>true</Can-Redefine-Classes>
+              <Main-Class>com.memoryintel.demo.DemoApp</Main-Class>
             </manifestEntries>
           </archive>
         </configuration>
